@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarjetas de Estudio - Kanji</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: rgba(255,255,255,0.4);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            perspective: 1000px;
+            height: 200px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-front {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+        }
+
+        .card-back {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            transform: rotateY(180deg);
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .kanji {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .meaning {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .reading {
+            font-size: 1.1rem;
+            color: #718096;
+            margin-bottom: 8px;
+        }
+
+        .level {
+            font-size: 0.9rem;
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .progress {
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            padding: 20px;
+            text-align: center;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .cards-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
+            
+            .kanji {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Tarjetas de Kanji</h1>
+            <p>Haz clic en las tarjetas para ver el significado y pronunciación</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn active" onclick="filterCards('all')">Todos</button>
+            <button class="btn" onclick="filterCards('basico')">Básico</button>
+            <button class="btn" onclick="filterCards('intermedio')">Intermedio</button>
+            <button class="btn" onclick="shuffleCards()">🔀 Mezclar</button>
+            <button class="btn" onclick="resetCards()">🔄 Reiniciar</button>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid">
+            <!-- Las tarjetas se generarán aquí -->
+        </div>
+
+        <div class="progress">
+            <h3>Progreso de Estudio</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <p><span id="studiedCount">0</span> de <span id="totalCount">0</span> tarjetas estudiadas</p>
+        </div>
+    </div>
+
+    <script>
+        const kanjiData = [
+            { kanji: '一', meaning: 'Uno', kunyomi: 'ひと (hito)', onyomi: 'イチ (ichi)', level: 'basico' },
+            { kanji: '二', meaning: 'Dos', kunyomi: 'ふた (futa)', onyomi: 'ニ (ni)', level: 'basico' },
+            { kanji: '三', meaning: 'Tres', kunyomi: 'みっ (mit)', onyomi: 'サン (san)', level: 'basico' },
+            { kanji: '四', meaning: 'Cuatro', kunyomi: 'よん (yon)', onyomi: 'シ (shi)', level: 'basico' },
+            { kanji: '五', meaning: 'Cinco', kunyomi: 'いつ (itsu)', onyomi: 'ゴ (go)', level: 'basico' },
+            { kanji: '六', meaning: 'Seis', kunyomi: 'むっ (mut)', onyomi: 'ロク (roku)', level: 'basico' },
+            { kanji: '七', meaning: 'Siete', kunyomi: 'なな (nana)', onyomi: 'シチ (shichi)', level: 'basico' },
+            { kanji: '八', meaning: 'Ocho', kunyomi: 'やっ (yat)', onyomi: 'ハチ (hachi)', level: 'basico' },
+            { kanji: '九', meaning: 'Nueve', kunyomi: 'ここの (kokono)', onyomi: 'キュウ (kyuu)', level: 'basico' },
+            { kanji: '十', meaning: 'Diez', kunyomi: 'とお (too)', onyomi: 'ジュウ (juu)', level: 'basico' },
+            { kanji: '十一', meaning: 'Once', kunyomi: '-', onyomi: 'ジュウイチ (juuichi)', level: 'basico' },
+            { kanji: '十二', meaning: 'Doce', kunyomi: '-', onyomi: 'ジュウニ (juuni)', level: 'basico' },
+            { kanji: '百', meaning: 'Cien', kunyomi: 'もも (momo)', onyomi: 'ヒャク (hyaku)', level: 'basico' },
+            { kanji: '千', meaning: 'Mil', kunyomi: 'ち (chi)', onyomi: 'セン (sen)', level: 'basico' },
+            { kanji: '万', meaning: 'Diez mil', kunyomi: 'よろず (yorozu)', onyomi: 'マン (man)', level: 'basico' },
+            { kanji: '百万', meaning: 'Un millón', kunyomi: '-', onyomi: 'ヒャクマン (hyakuman)', level: 'basico' },
+            { kanji: '億', meaning: 'Cien millones', kunyomi: '-', onyomi: 'オク (oku)', level: 'basico' },
+            { kanji: '年', meaning: 'Año / Edad', kunyomi: 'とし (toshi)', onyomi: 'ネン (nen)', level: 'basico' },
+            { kanji: '日', meaning: 'Día / Sol', kunyomi: 'ひ (hi)', onyomi: 'ニチ (nichi)', level: 'basico' },
+            { kanji: '月', meaning: 'Mes / Luna', kunyomi: 'つき (tsuki)', onyomi: 'ゲツ (getsu)', level: 'basico' },
+            { kanji: '木', meaning: 'Árbol', kunyomi: 'き (ki)', onyomi: 'モク (moku)', level: 'basico' },
+            { kanji: '山', meaning: 'Montaña', kunyomi: 'やま (yama)', onyomi: 'サン (san)', level: 'basico' },
+            { kanji: '川', meaning: 'Río', kunyomi: 'かわ (kawa)', onyomi: 'セン (sen)', level: 'basico' },
+            { kanji: '田', meaning: 'Arrozal / Campo de arroz', kunyomi: 'た (ta)', onyomi: 'デン (den)', level: 'basico' },
+            { kanji: '人', meaning: 'Hombre / Persona', kunyomi: 'ひと (hito)', onyomi: 'ジン (jin)', level: 'basico' },
+            { kanji: '口', meaning: 'Boca', kunyomi: 'くち (kuchi)', onyomi: 'コウ (kou)', level: 'basico' },
+            { kanji: '車', meaning: 'Carro', kunyomi: 'くるま (kuruma)', onyomi: 'シャ (sha)', level: 'basico' },
+            { kanji: '門', meaning: 'Portón', kunyomi: 'かど (kado)', onyomi: 'モン (mon)', level: 'basico' },
+            { kanji: '月曜日', meaning: 'Lunes', kunyomi: '-', onyomi: 'ゲツヨウビ (getsuyoubi)', level: 'basico' },
+            { kanji: '火曜日', meaning: 'Martes', kunyomi: '-', onyomi: 'カヨウビ (kayoubi)', level: 'basico' },
+            { kanji: '水曜日', meaning: 'Miércoles', kunyomi: '-', onyomi: 'スイヨウビ (suiyoubi)', level: 'basico' },
+            { kanji: '木曜日', meaning: 'Jueves', kunyomi: '-', onyomi: 'モクヨウビ (mokuyoubi)', level: 'basico' },
+            { kanji: '金曜日', meaning: 'Viernes', kunyomi: '-', onyomi: 'キンヨウビ (kinyoubi)', level: 'basico' },
+            { kanji: '土曜日', meaning: 'Sábado', kunyomi: '-', onyomi: 'ドヨウビ (doyoubi)', level: 'basico' },
+            { kanji: '日曜日', meaning: 'Domingo', kunyomi: '-', onyomi: 'ニチヨウビ (nichiyoubi)', level: 'basico' },
+            { kanji: '一月', meaning: 'Enero', kunyomi: '-', onyomi: 'イチガツ (ichigatsu)', level: 'basico' },
+            { kanji: '二月', meaning: 'Febrero', kunyomi: '-', onyomi: 'ニガツ (nigatsu)', level: 'basico' },
+            { kanji: '三月', meaning: 'Marzo', kunyomi: '-', onyomi: 'サンガツ (sangatsu)', level: 'basico' },
+            { kanji: '四月', meaning: 'Abril', kunyomi: '-', onyomi: 'シガツ (shigatsu)', level: 'basico' },
+            { kanji: '五月', meaning: 'Mayo', kunyomi: '-', onyomi: 'ゴガツ (gogatsu)', level: 'basico' },
+            { kanji: '六月', meaning: 'Junio', kunyomi: '-', onyomi: 'ロクガツ (rokugatsu)', level: 'basico' },
+            { kanji: '七月', meaning: 'Julio', kunyomi: '-', onyomi: 'シチガツ (shichigatsu)', level: 'basico' },
+            { kanji: '八月', meaning: 'Agosto', kunyomi: '-', onyomi: 'ハチガツ (hachigatsu)', level: 'basico' },
+            { kanji: '九月', meaning: 'Septiembre', kunyomi: '-', onyomi: 'クガツ (kugatsu)', level: 'basico' },
+            { kanji: '十月', meaning: 'Octubre', kunyomi: '-', onyomi: 'ジュウガツ (juugatsu)', level: 'basico' },
+            { kanji: '十一月', meaning: 'Noviembre', kunyomi: '-', onyomi: 'ジュウイチガツ (juuichigatsu)', level: 'basico' },
+            { kanji: '十二月', meaning: 'Diciembre', kunyomi: '-', onyomi: 'ジュウニガツ (juunigatsu)', level: 'basico' },
+            { kanji: '電車', meaning: 'Tren', kunyomi: 'でんしゃ (densha)', onyomi: '-', level: 'basico' },
+            { kanji: '火', meaning: 'Fuego', kunyomi: 'ひ (hi)', onyomi: 'カ (ka)', level: 'basico' },
+            { kanji: '水', meaning: 'Agua', kunyomi: 'みず (mizu)', onyomi: 'スイ (sui)', level: 'basico' },
+            { kanji: '金', meaning: 'Oro / Dinero / Metal', kunyomi: 'かね (kane)', onyomi: 'キン (kin)', level: 'basico' },
+            { kanji: '土', meaning: 'Tierra / Suelo', kunyomi: 'つち (tsuchi)', onyomi: 'ド (do)', level: 'basico' },
+            { kanji: '子', meaning: 'Niño / Hijo', kunyomi: 'こ (ko)', onyomi: 'シ (shi)', level: 'basico' },
+            { kanji: '女', meaning: 'Mujer / Femenino', kunyomi: 'おんな (onna)', onyomi: 'ジョ (jo)', level: 'basico' },
+            { kanji: '学ぶ', meaning: 'Estudiar / Aprender', kunyomi: 'まな-ぶ (mana-bu)', onyomi: 'ガク (gaku)', level: 'basico' },
+            { kanji: '生きる', meaning: 'Vivir / Vida', kunyomi: 'い-きる (i-kiru)', onyomi: 'セイ (sei)', level: 'basico' },
+            { kanji: '生まれる', meaning: 'Nacer / Nacimiento', kunyomi: 'う-まれる (u-mareru)', onyomi: 'セイ (sei)', level: 'basico' },
+            { kanji: '先', meaning: 'Anterior / Previo', kunyomi: 'さき (saki)', onyomi: 'セン (sen)', level: 'basico' },
+            { kanji: '上', meaning: 'Arriba / Encima', kunyomi: 'うえ (ue)', onyomi: 'ジョウ (jou)', level: 'basico' },
+            { kanji: '下', meaning: 'Abajo / Debajo', kunyomi: 'した (shita)', onyomi: 'カ (ka)', level: 'basico' },
+            { kanji: '中', meaning: 'Medio / Dentro', kunyomi: 'なか (naka)', onyomi: 'チュウ (chuu)', level: 'basico' },
+            { kanji: '大きい', meaning: 'Grande', kunyomi: 'おお-きい (oo-kii)', onyomi: 'ダイ (dai)', level: 'basico' },
+            { kanji: '小さい', meaning: 'Pequeño', kunyomi: 'ちい-さい (chii-sai)', onyomi: 'ショウ (shou)', level: 'basico' },
+            { kanji: '本', meaning: 'Raíz / Origen / Libro', kunyomi: 'もと (moto)', onyomi: 'ホン (hon)', level: 'basico' },
+            { kanji: '半ば', meaning: 'Mitad', kunyomi: 'なか-ば (naka-ba)', onyomi: 'ハン (han)', level: 'basico' },
+            { kanji: '分ける', meaning: 'Dividir', kunyomi: 'わ-ける (wa-keru)', onyomi: 'ブン (bun)', level: 'basico' },
+            { kanji: '力', meaning: 'Poder / Fuerza', kunyomi: 'ちから (chikara)', onyomi: 'リョク (ryoku)', level: 'basico' },
+            { kanji: '明るい', meaning: 'Brillante / Claro', kunyomi: 'あか-るい (aka-rui)', onyomi: 'メイ (mei)', level: 'basico' },
+            { kanji: '休む', meaning: 'Descansar', kunyomi: 'やす-む (yasu-mu)', onyomi: 'キュウ (kyuu)', level: 'basico' },
+            { kanji: '体', meaning: 'Cuerpo', kunyomi: 'からだ (karada)', onyomi: 'タイ (tai)', level: 'basico' },
+            { kanji: '好き', meaning: 'Gustar / Amar', kunyomi: 'す-き (su-ki)', onyomi: 'コウ (kou)', level: 'basico' },
+            { kanji: '男', meaning: 'Hombre / Masculino', kunyomi: 'おとこ (otoko)', onyomi: 'ダン (dan)', level: 'basico' },
+            { kanji: '林', meaning: 'Bosque / Arboleda', kunyomi: 'はやし (hayashi)', onyomi: 'リン (rin)', level: 'basico' },
+            { kanji: '森', meaning: 'Bosque / Selva', kunyomi: 'もり (mori)', onyomi: 'シン (shin)', level: 'basico' },
+            { kanji: '間', meaning: 'Entre / Espacio', kunyomi: 'あいだ (aida)', onyomi: 'カン (kan)', level: 'basico' },
+            { kanji: '畑', meaning: 'Campo cultivado', kunyomi: 'はたけ (hatake)', onyomi: 'ハタ (hata)', level: 'basico' },
+            { kanji: '岩', meaning: 'Roca / Peñasco', kunyomi: 'いわ (iwa)', onyomi: 'ガン (gan)', level: 'basico' },
+            { kanji: '目', meaning: 'Ojo', kunyomi: 'め (me)', onyomi: 'モク (moku)', level: 'basico' },
+            { kanji: '耳', meaning: 'Oreja', kunyomi: 'みみ (mimi)', onyomi: 'ジ (ji)', level: 'basico' },
+            { kanji: '手', meaning: 'Mano', kunyomi: 'て (te)', onyomi: 'シュ (shu)', level: 'basico' },
+            { kanji: '足', meaning: 'Pierna / Pie', kunyomi: 'あし (ashi)', onyomi: 'ソク (soku)', level: 'basico' },
+            { kanji: '雨', meaning: 'Lluvia', kunyomi: 'あめ (ame)', onyomi: 'ウ (u)', level: 'basico' },
+            { kanji: '竹', meaning: 'Bambú', kunyomi: 'たけ (take)', onyomi: 'チク (chiku)', level: 'basico' },
+            { kanji: '米', meaning: 'Arroz', kunyomi: 'こめ (kome)', onyomi: 'ベイ (bei)', level: 'basico' },
+            { kanji: '貝', meaning: 'Marisco / Concha', kunyomi: 'かい (kai)', onyomi: 'バイ (bai)', level: 'basico' },
+            { kanji: '石', meaning: 'Piedra', kunyomi: 'いし (ishi)', onyomi: 'セキ (seki)', level: 'basico' },
+            { kanji: '糸', meaning: 'Hilo', kunyomi: 'いと (ito)', onyomi: 'シ (shi)', level: 'basico' },
+            { kanji: '花', meaning: 'Flor', kunyomi: 'はな (hana)', onyomi: 'カ (ka)', level: 'basico' },
+            { kanji: '茶', meaning: 'Té', kunyomi: 'ちゃ (cha)', onyomi: 'チャ (cha)', level: 'basico' },
+            { kanji: '肉', meaning: 'Carne', kunyomi: 'にく (niku)', onyomi: 'ニク (niku)', level: 'basico' },
+            { kanji: '文', meaning: 'Texto / Escritura', kunyomi: 'ぶん (bun)', onyomi: 'ブン (bun)', level: 'basico' },
+            { kanji: '字', meaning: 'Letra / Carácter', kunyomi: 'じ (ji)', onyomi: 'ジ (ji)', level: 'basico' },
+            { kanji: '物', meaning: 'Cosa / Objeto', kunyomi: 'もの (mono)', onyomi: 'ブツ (butsu)', level: 'basico' },
+            { kanji: '牛', meaning: 'Vaca / Toro', kunyomi: 'うし (ushi)', onyomi: 'ギュウ (gyuu)', level: 'basico' },
+            { kanji: '馬', meaning: 'Caballo', kunyomi: 'うま (uma)', onyomi: 'バ (ba)', level: 'basico' },
+            { kanji: '鳥', meaning: 'Pájaro', kunyomi: 'とり (tori)', onyomi: 'チョウ (chou)', level: 'basico' },
+            { kanji: '魚', meaning: 'Pez', kunyomi: 'さかな (sakana)', onyomi: 'ギョ (gyo)', level: 'basico' },
+            { kanji: '新しい', meaning: 'Nuevo', kunyomi: 'あたら-しい (atara-shii)', onyomi: 'シン (shin)', level: 'basico' },
+            { kanji: '古い', meaning: 'Viejo', kunyomi: 'ふる-い (furu-i)', onyomi: 'コ (ko)', level: 'basico' },
+            { kanji: '長い', meaning: 'Largo', kunyomi: 'なが-い (naga-i)', onyomi: 'チョウ (chou)', level: 'basico' },
+            { kanji: '短い', meaning: 'Corto', kunyomi: 'みじか-い (mijika-i)', onyomi: 'タン (tan)', level: 'basico' },
+            { kanji: '高い', meaning: 'Alto / Caro', kunyomi: 'たか-い (taka-i)', onyomi: 'コウ (kou)', level: 'basico' },
+            { kanji: '安い', meaning: 'Barato', kunyomi: 'やす-い (yasu-i)', onyomi: 'アン (an)', level: 'basico' },
+            { kanji: '低い', meaning: 'Bajo', kunyomi: 'ひく-い (hiku-i)', onyomi: 'テイ (tei)', level: 'basico' },
+            { kanji: '暗い', meaning: 'Oscuro', kunyomi: 'くら-い (kura-i)', onyomi: 'アン (an)', level: 'basico' },
+            { kanji: '多い', meaning: 'Muchos / Mucho', kunyomi: 'おお-い (oo-i)', onyomi: 'タ (ta)', level: 'basico' },
+            { kanji: '少ない', meaning: 'Pocos / Poco', kunyomi: 'すく-ない (suku-nai)', onyomi: 'ショウ (shou)', level: 'basico' }
+
+        ];
+
+        let studiedCards = new Set();
+        let currentFilter = 'all';
+
+        function createCard(data, index) {
+            return `
+                <div class="card" data-level="${data.level}" data-index="${index}">
+                    <div class="card-inner" onclick="flipCard(this, ${index})">
+                        <div class="card-front">
+                            <div class="kanji">${data.kanji}</div>
+                        </div>
+                        <div class="card-back">
+                            <div class="meaning">${data.meaning}</div>
+                            <div class="reading"><strong>Kunyomi:</strong> ${data.kunyomi}</div>
+                            <div class="reading"><strong>Onyomi:</strong> ${data.onyomi}</div>
+                            <div class="level">Nivel: ${data.level}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCards() {
+            const grid = document.getElementById('cardsGrid');
+            let filteredData = currentFilter === 'all' ? kanjiData : kanjiData.filter(item => item.level === currentFilter);
+            
+            grid.innerHTML = filteredData.map((data, index) => {
+                const originalIndex = kanjiData.indexOf(data);
+                return createCard(data, originalIndex);
+            }).join('');
+
+            updateProgress();
+        }
+
+        function flipCard(cardInner, index) {
+            const card = cardInner.parentElement;
+            card.classList.toggle('flipped');
+            
+            if (card.classList.contains('flipped')) {
+                studiedCards.add(index);
+                updateProgress();
+            }
+        }
+
+        function filterCards(level) {
+            currentFilter = level;
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderCards();
+        }
+
+        function shuffleCards() {
+            const grid = document.getElementById('cardsGrid');
+            const cards = Array.from(grid.children);
+            
+            // Algoritmo Fisher-Yates para mezclar
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                grid.appendChild(cards[j]);
+            }
+        }
+
+        function resetCards() {
+            studiedCards.clear();
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('flipped');
+            });
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const totalCards = currentFilter === 'all' ? kanjiData.length : kanjiData.filter(item => item.level === currentFilter).length;
+            const studiedCount = studiedCards.size;
+            const percentage = totalCards > 0 ? (studiedCount / totalCards) * 100 : 0;
+            
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('studiedCount').textContent = studiedCount;
+            document.getElementById('totalCount').textContent = totalCards;
+        }
+
+        // Inicializar la aplicación
+        renderCards();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96fe1a92f077576f',t:'MTc1NTMxNzY1NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
